@@ -8,22 +8,20 @@
 export ZONE=
 ```
 ```
-export REGION="${ZONE%-*}"
-export REPO=gmemegen
-export PROJECT_ID=$(gcloud config list --format 'value(core.project)')
-export CLOUDSQL_SERVICE_ACCOUNT=cloudsql-service-account
 
-gcloud config set compute/zone $ZONE
-gcloud config set compute/region $REGION
+
+
 
 gcloud services enable artifactregistry.googleapis.com
-sleep 10
+
+export PROJECT_ID=$(gcloud config list --format 'value(core.project)')
+export CLOUDSQL_SERVICE_ACCOUNT=cloudsql-service-account
 
 gcloud iam service-accounts create $CLOUDSQL_SERVICE_ACCOUNT --project=$PROJECT_ID
 
 gcloud projects add-iam-policy-binding $PROJECT_ID \
 --member="serviceAccount:$CLOUDSQL_SERVICE_ACCOUNT@$PROJECT_ID.iam.gserviceaccount.com" \
---role="roles/cloudsql.admin"
+--role="roles/cloudsql.admin" 
 
 gcloud iam service-accounts keys create $CLOUDSQL_SERVICE_ACCOUNT.json \
     --iam-account=$CLOUDSQL_SERVICE_ACCOUNT@$PROJECT_ID.iam.gserviceaccount.com \
@@ -37,13 +35,17 @@ kubectl create secret generic cloudsql-instance-credentials \
     
 kubectl create secret generic cloudsql-db-credentials \
 --from-literal=username=postgres \
---from-literal=password=QWIKLAB_EXPLORERS_TS \
+--from-literal=password=supersecret! \
 --from-literal=dbname=gmemegen_db
 
 gsutil -m cp -r gs://spls/gsp919/gmemegen .
 cd gmemegen
 
-gcloud auth configure-docker ${REGION}-docker.pkg.dev
+export REGION=${ZONE%-*}
+export PROJECT_ID=$(gcloud config list --format 'value(core.project)')
+export REPO=gmemegen
+
+gcloud auth configure-docker ${REGION}-docker.pkg.dev --quiet
 
 gcloud artifacts repositories create $REPO \
     --repository-format=docker --location=$REGION
@@ -51,6 +53,7 @@ gcloud artifacts repositories create $REPO \
 docker build -t ${REGION}-docker.pkg.dev/${PROJECT_ID}/gmemegen/gmemegen-app:v1 .
 
 docker push ${REGION}-docker.pkg.dev/${PROJECT_ID}/gmemegen/gmemegen-app:v1
+
 
 sed -i "33c\          image: $REGION-docker.pkg.dev/$PROJECT_ID/gmemegen/gmemegen-app:v1" gmemegen_deployment.yaml
 
@@ -60,13 +63,14 @@ kubectl create -f gmemegen_deployment.yaml
 
 kubectl get pods
 
-sleep 25
+sleep 20
 
 kubectl expose deployment gmemegen \
     --type "LoadBalancer" \
     --port 80 --target-port 8080
 
-kubectl describe service gmemegen
+sleep 20
+
 
 export LOAD_BALANCER_IP=$(kubectl get svc gmemegen \
 -o=jsonpath='{.status.loadBalancer.ingress[0].ip}' -n default)
@@ -74,6 +78,8 @@ echo gMemegen Load Balancer Ingress IP: http://$LOAD_BALANCER_IP
 
 POD_NAME=$(kubectl get pods --output=json | jq -r ".items[0].metadata.name")
 kubectl logs $POD_NAME gmemegen | grep "INFO"
+
+
 
 INSTANCE_NAME="postgres-gmemegen"
 DB_USER="postgres"
@@ -85,13 +91,12 @@ gcloud sql connect $INSTANCE_NAME --user=$DB_USER --quiet << EOF
 
 SELECT * FROM meme;
 EOF
-
 ```
 
 - **password:**
 
 ```
-QWIKLAB_EXPLORERS_TS
+supersecret!
 ```
 
 # Congratulations ..!!🎉  You completed the lab shortly..😃💯
