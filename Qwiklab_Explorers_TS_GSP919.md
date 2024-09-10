@@ -37,7 +37,7 @@ kubectl create secret generic cloudsql-instance-credentials \
     
 kubectl create secret generic cloudsql-db-credentials \
 --from-literal=username=postgres \
---from-literal=password=QWIKLAB_eXPLORERS_TS \
+--from-literal=password=QWIKLAB_EXPLORERS_TS \
 --from-literal=dbname=gmemegen_db
 
 gsutil -m cp -r gs://spls/gsp919/gmemegen .
@@ -91,7 +91,7 @@ EOF
 - **password:**
 
 ```
-QWIKLAB_eXPLORERS_TS
+QWIKLAB_EXPLORERS_TS
 ```
 
 # Congratulations ..!!🎉  You completed the lab shortly..😃💯
